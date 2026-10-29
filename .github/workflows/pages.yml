@@ -19,8 +19,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Stage Pages site
+        run: |
+          python3 - <<'PYCODE'
+          from pathlib import Path
+          import json, shutil
+          root=Path('.'); dest=Path('_pages'); info=json.loads(Path('build-info.json').read_text())
+          external=info.get('media_host')=='existing-public-repository-raw'
+          for p in root.rglob('*'):
+              if not p.is_file() or p.parts[0] in ('.git','.github','_pages'): continue
+              if external and p.suffix.lower()=='.png': continue
+              q=dest/p; q.parent.mkdir(parents=True,exist_ok=True); shutil.copyfile(p,q)
+          size=sum(p.stat().st_size for p in dest.rglob('*') if p.is_file())
+          assert size<=950*1024**2, size
+          print('Pages artifact bytes:',size)
+          PYCODE
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: '_pages'
       - uses: actions/deploy-pages@v4
         id: deployment

@@ -16,6 +16,7 @@
     const end=header(22,[[0,0x06054b50,4],[8,files.length,2],[10,files.length,2],[12,cs,4],[16,offset,4]]);
     return new Blob([...parts,...central,end],{type:'application/zip'});
   }
+  document.querySelectorAll('a[download]').forEach(a=>{if(!/\.png(?:\?|$)/i.test(a.href))return;a.addEventListener('click',async e=>{e.preventDefault();try{const r=await fetch(a.href);if(!r.ok)throw Error('Image download failed');const u=URL.createObjectURL(await r.blob());const link=document.createElement('a');link.href=u;link.download=a.download||decodeURIComponent(new URL(a.href).pathname.split('/').pop());link.click();setTimeout(()=>URL.revokeObjectURL(u),60000);}catch(err){console.error(err);a.textContent='下载失败，点击重试';}});});
   document.querySelectorAll('[data-package]').forEach(a=>a.addEventListener('click',async e=>{
     e.preventDefault();if(a.dataset.busy)return;a.dataset.busy='1';const label=a.textContent;
     try{
@@ -24,6 +25,8 @@
       const files=urls.map(url=>({url,name:decodeURIComponent(new URL(url).pathname.split('/assets/')[1])}));
       scope.querySelectorAll('article').forEach(article=>{const texts=[...article.querySelectorAll('textarea')].map(t=>t.value).join('\n\n');if(texts)files.push({url:URL.createObjectURL(new Blob([texts],{type:'text/plain'})),name:article.id+'/listing.txt'});});
       if(scope.matches?.('article')){const texts=[...scope.querySelectorAll('textarea')].map(t=>t.value).join('\n\n');if(texts)files.push({url:URL.createObjectURL(new Blob([texts])),name:scope.id+'/listing.txt'});}
+      const promptLinks=[...scope.querySelectorAll('a[href]')].map(a=>new URL(a.getAttribute('href'),location.href)).filter(u=>/\/assets\/[^/]+\/video\/.*\.md$/.test(decodeURIComponent(u.pathname)));
+      for(const u of promptLinks)files.push({url:u.href,name:decodeURIComponent(u.pathname.split('/assets/')[1])});
       if(!files.length)throw Error('没有可打包的图片');
       const blob=await pack(files,(i,n)=>a.textContent=`正在打包 ${i}/${n}…`);const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=a.dataset.package.split('/').pop();link.click();setTimeout(()=>URL.revokeObjectURL(url),60000);files.filter(f=>f.url.startsWith('blob:')).forEach(f=>URL.revokeObjectURL(f.url));
       a.textContent='下载已准备好';
